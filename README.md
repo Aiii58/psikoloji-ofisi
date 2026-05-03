@@ -1,1 +1,0 @@
-# psikoloji-ofisi
