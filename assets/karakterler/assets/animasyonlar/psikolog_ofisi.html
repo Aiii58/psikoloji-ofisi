@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Psikolog Ofisi Simülasyonu</title>
+<style>
+  :root {
+    --bg-deep: #0a1428;
+    --bg-mid: #1a2540;
+    --bg-panel: rgba(20, 30, 50, 0.85);
+    --bg-input: rgba(10, 20, 40, 0.7);
+    --border-soft: rgba(127, 179, 230, 0.18);
+    --border-strong: rgba(127, 179, 230, 0.4);
+    --txt-main: #e6ecf2;
+    --txt-soft: #8da3bf;
+    --accent-blue: #7fb3e6;
+    --accent-amber: #ffd9a0;
+    --shadow-deep: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-mid) 100%);
+    color: var(--txt-main);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── Loading screen (initial) ─── */
+  #loadingScreen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 30%, #1a2540 0%, #0a1428 80%);
+    z-index: 100;
+    transition: opacity 0.6s;
+  }
+  #loadingScreen h1 {
+    font-family: Georgia, serif;
+    font-weight: 300;
+    font-size: 28px;
+    color: var(--accent-blue);
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+  #loadingScreen .subtitle {
+    color: var(--txt-soft);
+    font-size: 14px;
+    margin-bottom: 32px;
+    font-style: italic;
+  }
+  .spinner {
+    width: 50px; height: 50px;
+    border: 3px solid rgba(127, 179, 230, 0.15);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loadingDetail {
+    color: var(--txt-soft);
+    font-size: 12px;
+    text-align: center;
+    max-width: 400px;
+    line-height: 1.6;
+  }
+  #loadingProgress {
+    margin-top: 14px;
+    width: 280px;
+    height: 4px;
+    background: rgba(127, 179, 230, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  #loadingProgressBar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-amber));
+    transition: width 0.3s;
+  }
+
+  /* ─── Entry screen (character selection) ─── */
+  #entryScreen {
+    position: fixed; inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+    overflow-y: auto;
+    z-index: 50;
+  }
+  #entryScreen.active { display: flex; }
+
+  .entry-header {
+    text-align: center;
+    margin-bottom: 24px;
+    max-width: 700px;
+  }
+  .entry-header h1 {
+    font-family: Georgia, serif;
+    font-weight: 300;
+    font-size: 32px;
+    color: var(--txt-main);
+    margin-bottom: 8px;
+  }
+  .entry-header h1 em {
+    color: var(--accent-blue);
+    font-style: italic;
+  }
+  .entry-header p {
+    color: var(--txt-soft);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .entry-content {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .entry-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 24px;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-deep);
+  }
+
+  .panel-label {
+    color: var(--accent-blue);
+    font-size: 11px;
+    letter-spacing: 3px;
+    margin-bottom: 18px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .panel-label::before {
+    content: '— ';
+    color: var(--accent-blue);
+  }
+
+  .field {
+    margin-bottom: 18px;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--txt-main);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .field input {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    color: var(--txt-main);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus {
+    border-color: var(--accent-blue);
+  }
+  .field input::placeholder {
+    color: var(--txt-soft);
+    font-style: italic;
+  }
+
+  /* Character grid */
+  .char-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .char-card {
+    background: var(--bg-input);
+    border: 2px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 10px 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    user-select: none;
+  }
+  .char-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+  }
+  .char-card.selected {
+    border-color: var(--accent-blue);
+    background: rgba(127, 179, 230, 0.1);
+    box-shadow: 0 0 0 1px var(--accent-blue), 0 4px 18px rgba(127, 179, 230, 0.2);
+  }
+  .char-thumb {
+    width: 100%;
+    aspect-ratio: 1 / 1.15;
+    background: linear-gradient(180deg, rgba(127, 179, 230, 0.08), rgba(0,0,0,0.2));
+    border-radius: 5px;
+    margin-bottom: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    color: var(--accent-blue);
+    overflow: hidden;
+  }
+  .char-thumb canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .char-name {
+    font-size: 11px;
+    color: var(--txt-main);
+    line-height: 1.3;
+    font-weight: 500;
+  }
+  .char-meta {
+    font-size: 10px;
+    color: var(--txt-soft);
+    margin-top: 2px;
+  }
+
+  /* Preview area */
+  .preview-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #previewContainer {
+    width: 100%;
+    aspect-ratio: 1 / 1.1;
+    max-height: 540px;
+    border-radius: 8px;
+    background: radial-gradient(ellipse at center, rgba(127, 179, 230, 0.08) 0%, rgba(10, 20, 40, 0.5) 70%);
+    overflow: hidden;
+    position: relative;
+  }
+  #previewContainer canvas { display: block; width: 100%; height: 100%; }
+  .preview-caption {
+    color: var(--txt-soft);
+    font-size: 11px;
+    letter-spacing: 3px;
+    margin-top: 12px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .start-btn {
+    grid-column: 1 / -1;
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent-blue), #4f8fc8);
+    color: #0a1428;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .start-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(127, 179, 230, 0.3);
+  }
+  .start-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ─── Game HUD ─── */
+  #gameContainer {
+    position: fixed; inset: 0;
+    display: none;
+  }
+  #gameContainer.active { display: block; }
+
+  #gameCanvas { display: block; width: 100%; height: 100%; }
+
+  .hud {
+    position: fixed;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-deep);
+    z-index: 10;
+  }
+
+  #hudInfo {
+    top: 16px; left: 16px;
+    padding: 14px 18px;
+    min-width: 220px;
+  }
+  #hudInfo .clinic {
+    font-family: Georgia, serif;
+    font-size: 18px;
+    color: var(--accent-blue);
+    margin-bottom: 4px;
+  }
+  #hudInfo .therapist {
+    font-size: 12px;
+    color: var(--txt-soft);
+    margin-bottom: 10px;
+  }
+  #hudInfo .stats {
+    display: flex;
+    gap: 18px;
+    font-size: 11px;
+    color: var(--txt-soft);
+    border-top: 1px solid var(--border-soft);
+    padding-top: 8px;
+  }
+  #hudInfo .stats span b {
+    color: var(--accent-amber);
+    font-weight: 600;
+  }
+
+  #hudActions {
+    top: 16px; right: 16px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 160px;
+  }
+  .action-btn {
+    padding: 10px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    color: var(--txt-main);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .action-btn:hover:not(:disabled) {
+    border-color: var(--accent-blue);
+    background: rgba(127, 179, 230, 0.1);
+  }
+  .action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .action-btn.primary {
+    background: linear-gradient(135deg, var(--accent-blue), #4f8fc8);
+    color: #0a1428;
+    border-color: transparent;
+  }
+  .action-btn .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent-amber);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  #hudControls {
+    bottom: 16px; left: 16px;
+    padding: 14px 18px;
+    font-size: 11px;
+  }
+  #hudControls .ctrl-title {
+    color: var(--accent-blue);
+    font-size: 10px;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  #hudControls .ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  #hudControls kbd {
+    background: var(--bg-input);
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: 'Segoe UI', monospace;
+    font-size: 10px;
+    color: var(--accent-blue);
+    min-width: 80px;
+    text-align: center;
+    font-weight: 600;
+  }
+  #hudControls span {
+    color: var(--txt-soft);
+  }
+
+  #hudCamera {
+    bottom: 16px; right: 16px;
+    padding: 10px 16px;
+    font-size: 11px;
+    color: var(--txt-soft);
+  }
+  #hudCamera b {
+    color: var(--accent-amber);
+    font-weight: 600;
+    margin-left: 6px;
+  }
+
+  /* Toasts */
+  #toastArea {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 20;
+    pointer-events: none;
+  }
+  .toast {
+    background: rgba(20, 30, 50, 0.95);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-size: 13px;
+    color: var(--txt-main);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    animation: toastIn 0.3s ease, toastOut 0.4s ease 2.6s forwards;
+    max-width: 400px;
+    text-align: center;
+  }
+  @keyframes toastIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes toastOut {
+    to { transform: translateY(-20px); opacity: 0; }
+  }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen">
+  <h1>PSİKOLOG OFİSİ</h1>
+  <div class="subtitle">3D Simülasyon</div>
+  <div class="spinner"></div>
+  <div id="loadingDetail">Karakterler ve animasyonlar yükleniyor...</div>
+  <div id="loadingProgress"><div id="loadingProgressBar"></div></div>
+</div>
+
+<!-- ENTRY SCREEN -->
+<div id="entryScreen">
+  <div class="entry-header">
+    <h1>Yeni bir <em>seans</em> başlıyor.</h1>
+    <p>Kendi psikoloji kliniğini kur, terapistini seç ve ilk müşterini içeri al.</p>
+  </div>
+
+  <div class="entry-content">
+    <div class="entry-panel">
+      <div class="panel-label">Profil</div>
+
+      <div class="field">
+        <label>Terapist Adı</label>
+        <input type="text" id="inputTerapist" placeholder="Örn. Dr. Ayşe Demir" maxlength="40">
+      </div>
+
+      <div class="field">
+        <label>Klinik Adı</label>
+        <input type="text" id="inputKlinik" placeholder="Örn. Sükûnet Psikolojisi" maxlength="40">
+      </div>
+
+      <div class="panel-label" style="margin-top: 22px;">Karakter Seçimi</div>
+      <div class="char-grid" id="charGrid"></div>
+    </div>
+
+    <div class="entry-panel preview-area">
+      <div class="panel-label">Ön İzleme</div>
+      <div id="previewContainer"></div>
+      <div class="preview-caption">Karakteriniz · 360° Otomatik Dönüş</div>
+      <button class="start-btn" id="btnStart" disabled>Seansı Başlat</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+
+  <div class="hud" id="hudInfo">
+    <div class="clinic" id="lblKlinik">—</div>
+    <div class="therapist" id="lblTerapist">Sorumlu: —</div>
+    <div class="stats">
+      <span>Seans <b id="lblSeans">#1</b></span>
+      <span>Saat <b id="lblSaat">09:00</b></span>
+    </div>
+  </div>
+
+  <div class="hud" id="hudActions">
+    <button class="action-btn primary" id="btnMusteri">
+      <span class="dot"></span> Müşteri Al
+    </button>
+    <button class="action-btn" id="btnBitir" disabled>Seansı Bitir</button>
+    <button class="action-btn" id="btnMenu">Ana Menü</button>
+  </div>
+
+  <div class="hud" id="hudControls">
+    <div class="ctrl-title">KONTROLLER</div>
+    <div class="ctrl-row"><kbd>WASD / ←↑↓→</kbd><span>Hareket</span></div>
+    <div class="ctrl-row"><kbd>Space</kbd><span>Zıplama</span></div>
+    <div class="ctrl-row"><kbd>C</kbd><span>Kamera değiştir</span></div>
+    <div class="ctrl-row"><kbd>LMB Sürükle</kbd><span>360° bak</span></div>
+    <div class="ctrl-row"><kbd>Wheel</kbd><span>Yakınlaştır / Uzaklaştır</span></div>
+  </div>
+
+  <div class="hud" id="hudCamera">Kamera: <b id="lblKamera">İzometrik</b></div>
+</div>
+
+<div id="toastArea"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+
+/* ═══════════════════════════════════════════════════════════════
+   CHARACTER CATALOG
+   ═══════════════════════════════════════════════════════════════ */
+const CHARACTERS = [
+  { id: 'claire',  file: 'assets/karakterler/claire.fbx',  name: 'Claire',  desc: 'Genç Kadın' },
+  { id: 'remy',    file: 'assets/karakterler/Remy.fbx',    name: 'Remy',    desc: 'Genç Erkek' },
+  { id: 'kate',    file: 'assets/karakterler/Kate.fbx',    name: 'Kate',    desc: 'Genç Kadın' },
+  { id: 'james',   file: 'assets/karakterler/James.fbx',   name: 'James',   desc: 'Genç Erkek' },
+];
+
+const ANIMATIONS = [
+  { id: 'idle',    file: 'assets/animasyonlar/Breathing_Idle.fbx' },
+  { id: 'walking', file: 'assets/animasyonlar/Walking.fbx' },
+  { id: 'lying',   file: 'assets/animasyonlar/Laying_Idle.fbx' },
+];
+
+// Loaded data caches
+const characterModels = {};   // id → THREE.Group (template, will be cloned per use)
+const animationClips = {};    // id → THREE.AnimationClip
+
+/* ═══════════════════════════════════════════════════════════════
+   ASSET LOADER
+   ═══════════════════════════════════════════════════════════════ */
+const fbxLoader = new FBXLoader();
+
+function loadFBX(url) {
+  return new Promise((resolve, reject) => {
+    fbxLoader.load(url, resolve, undefined, reject);
+  });
+}
+
+async function loadAllAssets() {
+  const total = CHARACTERS.length + ANIMATIONS.length;
+  let done = 0;
+
+  const updateLoading = (msg) => {
+    document.getElementById('loadingDetail').textContent = msg;
+    const pct = Math.round((done / total) * 100);
+    document.getElementById('loadingProgressBar').style.width = pct + '%';
+  };
+
+  // Load characters
+  for (const ch of CHARACTERS) {
+    updateLoading(`Karakter yükleniyor: ${ch.name}...`);
+    try {
+      const fbx = await loadFBX(ch.file);
+      // Mixamo characters are in cm; need to scale to meters (~1.78m tall)
+      // Will be re-applied per-clone, but template stays at native scale
+      
+      // Enable shadows and tweak materials
+      fbx.traverse(obj => {
+        if (obj.isMesh) {
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+          obj.frustumCulled = false; // prevent disappearing during animation
+          if (obj.material) {
+            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+            mats.forEach(m => {
+              if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+              m.needsUpdate = true;
+            });
+          }
+        }
+      });
+      characterModels[ch.id] = fbx;
+      done++;
+    } catch (err) {
+      console.error('Karakter yüklenemedi:', ch.id, err);
+      done++;
+    }
+  }
+
+  // Load animations
+  for (const an of ANIMATIONS) {
+    updateLoading(`Animasyon yükleniyor: ${an.id}...`);
+    try {
+      const fbx = await loadFBX(an.file);
+      // FBX animation files contain mesh + skeleton + animations.
+      // We only want the AnimationClip(s).
+      if (fbx.animations && fbx.animations.length > 0) {
+        const clip = fbx.animations[0];
+        clip.name = an.id;
+        animationClips[an.id] = clip;
+      } else {
+        console.warn('Animasyon bulunamadı:', an.id);
+      }
+      done++;
+    } catch (err) {
+      console.error('Animasyon yüklenemedi:', an.id, err);
+      done++;
+    }
+  }
+
+  updateLoading('Hazır!');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHARACTER CLONE HELPER
+   Clone a character with its skeleton intact, ready for animation.
+   ═══════════════════════════════════════════════════════════════ */
+function cloneCharacter(charId) {
+  const template = characterModels[charId];
+  if (!template) {
+    console.error('Karakter bulunamadı:', charId);
+    return null;
+  }
+  // SkeletonUtils.clone deep-clones with skeleton, but for FBX we use a simpler approach:
+  // Use THREE.Skeleton-aware cloning manually
+  const cloned = cloneSkeletalModel(template);
+  cloned.scale.set(0.01, 0.01, 0.01);
+  return cloned;
+}
+
+// Manual clone of skeletal mesh (FBXLoader produces SkinnedMesh inside Group)
+function cloneSkeletalModel(source) {
+  const clone = source.clone(true);
+  
+  // Build map of bone names -> cloned bones
+  const sourceBones = [];
+  const cloneBones = [];
+  source.traverse(o => { if (o.isBone) sourceBones.push(o); });
+  clone.traverse(o => { if (o.isBone) cloneBones.push(o); });
+
+  const boneMap = new Map();
+  for (let i = 0; i < sourceBones.length; i++) {
+    boneMap.set(sourceBones[i].name, cloneBones[i]);
+  }
+
+  // Re-bind skinned meshes to cloned skeleton
+  source.traverse(srcMesh => {
+    if (srcMesh.isSkinnedMesh) {
+      // Find corresponding clone mesh
+      let cloneMesh = null;
+      clone.traverse(o => {
+        if (!cloneMesh && o.isSkinnedMesh && o.name === srcMesh.name) {
+          cloneMesh = o;
+        }
+      });
+      if (!cloneMesh) return;
+
+      // Build new skeleton from cloned bones (in same order)
+      const newBones = srcMesh.skeleton.bones.map(b => boneMap.get(b.name) || b);
+      const newSkeleton = new THREE.Skeleton(newBones, srcMesh.skeleton.boneInverses);
+      cloneMesh.bind(newSkeleton, cloneMesh.matrixWorld);
+    }
+  });
+
+  return clone;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PREVIEW SCENE (character selection)
+   ═══════════════════════════════════════════════════════════════ */
+const previewContainer = document.getElementById('previewContainer');
+let previewRenderer, previewScene, previewCamera, previewChar = null, previewMixer = null;
+
+function initPreview() {
+  previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  previewRenderer.shadowMap.enabled = true;
+  previewRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  previewRenderer.outputColorSpace = THREE.SRGBColorSpace;
+  previewContainer.appendChild(previewRenderer.domElement);
+
+  previewScene = new THREE.Scene();
+
+  previewCamera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
+  previewCamera.position.set(0, 1.55, 2.6);
+  previewCamera.lookAt(0, 1.0, 0);
+
+  // Lights — bright frontal so face is visible
+  const amb = new THREE.AmbientLight(0x6a7e9a, 0.85);
+  previewScene.add(amb);
+
+  const key = new THREE.DirectionalLight(0xffffff, 1.4);
+  key.position.set(1.5, 3.5, 3.5);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.near = 0.5; key.shadow.camera.far = 12;
+  key.shadow.camera.left = -2; key.shadow.camera.right = 2;
+  key.shadow.camera.top = 3; key.shadow.camera.bottom = -1;
+  previewScene.add(key);
+
+  const fill = new THREE.DirectionalLight(0xfff0d8, 0.5);
+  fill.position.set(-2, 2, 2);
+  previewScene.add(fill);
+
+  const rim = new THREE.DirectionalLight(0x7fb3e6, 0.65);
+  rim.position.set(-3, 2, -2);
+  previewScene.add(rim);
+
+  // Ground
+  const ground = new THREE.Mesh(
+    new THREE.CircleGeometry(1.6, 32),
+    new THREE.MeshStandardMaterial({ color: 0x1a2533, roughness: 0.9 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  previewScene.add(ground);
+
+  resizePreview();
+  window.addEventListener('resize', resizePreview);
+}
+
+function resizePreview() {
+  if (!previewRenderer) return;
+  const w = previewContainer.clientWidth;
+  const h = previewContainer.clientHeight;
+  if (w === 0 || h === 0) return;
+  previewRenderer.setSize(w, h, false);
+  previewCamera.aspect = w / h;
+  previewCamera.updateProjectionMatrix();
+}
+
+function setPreviewCharacter(charId) {
+  if (previewChar) {
+    previewScene.remove(previewChar);
+    previewChar = null;
+    previewMixer = null;
+  }
+  const ch = cloneCharacter(charId);
+  if (!ch) return;
+
+  previewChar = ch;
+  previewScene.add(previewChar);
+
+  // Apply idle animation
+  if (animationClips.idle) {
+    previewMixer = new THREE.AnimationMixer(previewChar);
+    const action = previewMixer.clipAction(animationClips.idle);
+    action.play();
+  }
+}
+
+const previewClock = new THREE.Clock();
+function animatePreview() {
+  requestAnimationFrame(animatePreview);
+  if (!previewRenderer || !previewChar) return;
+  const dt = previewClock.getDelta();
+  if (previewMixer) previewMixer.update(dt);
+  // Auto-rotate gently
+  previewChar.rotation.y = Math.sin(performance.now() * 0.0005) * 0.5;
+  previewRenderer.render(previewScene, previewCamera);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ENTRY SCREEN UI
+   ═══════════════════════════════════════════════════════════════ */
+const charState = { selectedId: null, terapist: '', klinik: '' };
+
+function buildCharacterGrid() {
+  const grid = document.getElementById('charGrid');
+  grid.innerHTML = '';
+  for (const ch of CHARACTERS) {
+    const card = document.createElement('div');
+    card.className = 'char-card';
+    card.dataset.id = ch.id;
+    card.innerHTML = `
+      <div class="char-thumb">${ch.name[0]}</div>
+      <div class="char-name">${ch.name}</div>
+      <div class="char-meta">${ch.desc}</div>
+    `;
+    card.addEventListener('click', () => selectCharacter(ch.id));
+    grid.appendChild(card);
+  }
+}
+
+function selectCharacter(id) {
+  charState.selectedId = id;
+  document.querySelectorAll('.char-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.id === id);
+  });
+  setPreviewCharacter(id);
+  validateForm();
+}
+
+function validateForm() {
+  const ok = charState.selectedId && charState.terapist.trim() && charState.klinik.trim();
+  document.getElementById('btnStart').disabled = !ok;
+}
+
+document.getElementById('inputTerapist').addEventListener('input', e => {
+  charState.terapist = e.target.value;
+  validateForm();
+});
+document.getElementById('inputKlinik').addEventListener('input', e => {
+  charState.klinik = e.target.value;
+  validateForm();
+});
+
+document.getElementById('btnStart').addEventListener('click', () => {
+  if (document.getElementById('btnStart').disabled) return;
+  startGame();
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   GAME WORLD
+   ═══════════════════════════════════════════════════════════════ */
+const ROOM = { width: 9, depth: 8, height: 3.2 };
+const DOOR = { width: 1.0, height: 2.15, centerX: 0 };
+
+let renderer, scene, camera;
+let player = null, playerMixer = null, playerActions = {};
+let client = null, clientMixer = null, clientActions = {};
+
+const playerState = {
+  pos: new THREE.Vector3(0, 0, -3.5),
+  yaw: 0,
+  targetYaw: 0,
+  yOffset: 0,
+  jumpVel: 0,
+  isOnGround: true,
+  currentAnim: 'idle',
+};
+
+const camState = {
+  yaw: Math.PI,
+  pitch: 0.45,
+  distance: 5.5,
+  targetYaw: Math.PI,
+  targetPitch: 0.45,
+  targetDistance: 5.5,
+  mode: 0,
+  modeNames: ['İzometrik', 'Kuşbakışı', '3. Şahıs'],
+};
+
+const CAM_PRESETS = [
+  { yaw: Math.PI, pitch: 0.45, distance: 5.5 },   // Izometrik
+  { yaw: Math.PI, pitch: 1.2, distance: 7.0 },    // Kuşbakışı
+  { yaw: Math.PI, pitch: 0.25, distance: 3.2 },   // 3. Şahıs
+];
+
+const FURNITURE = []; // Box3 colliders
+const PLAYER_RADIUS = 0.20;
+
+function initGame() {
+  renderer = new THREE.WebGLRenderer({
+    canvas: document.getElementById('gameCanvas'),
+    antialias: true
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a1428);
+  scene.fog = new THREE.Fog(0x0a1428, 8, 22);
+
+  camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+
+  buildRoom();
+  buildLighting();
+  spawnPlayer();
+
+  window.addEventListener('resize', onResize);
+}
+
+function onResize() {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+}
+
+function addCollider(mesh) {
+  mesh.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(mesh);
+  FURNITURE.push(box);
+}
+
+/* ───── Room construction ───── */
+function buildRoom() {
+  const room = new THREE.Group();
+  scene.add(room);
+
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x2d3a52, roughness: 0.9 });
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x3a2818, roughness: 0.7 });
+  const ceilMat = new THREE.MeshStandardMaterial({ color: 0x6a7a8a, roughness: 0.9 });
+  const skirtMat = new THREE.MeshStandardMaterial({ color: 0x8a9aac, roughness: 0.6 });
+
+  // Floor
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROOM.width, ROOM.depth),
+    floorMat
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  room.add(floor);
+
+  // Floor parquet pattern (subtle dark lines)
+  for (let i = 1; i < 6; i++) {
+    const stripe = new THREE.Mesh(
+      new THREE.PlaneGeometry(ROOM.width, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.9 })
+    );
+    stripe.rotation.x = -Math.PI / 2;
+    stripe.position.set(0, 0.001, -ROOM.depth/2 + i * (ROOM.depth/6));
+    room.add(stripe);
+  }
+
+  // Ceiling
+  const ceiling = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROOM.width, ROOM.depth),
+    ceilMat
+  );
+  ceiling.rotation.x = Math.PI / 2;
+  ceiling.position.y = ROOM.height;
+  ceiling.receiveShadow = true;
+  room.add(ceiling);
+
+  // Walls (4 sides, north has door cutout)
+  // South wall
+  const wallS = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROOM.width, ROOM.height),
+    wallMat
+  );
+  wallS.position.set(0, ROOM.height/2, ROOM.depth/2);
+  wallS.rotation.y = Math.PI;
+  wallS.receiveShadow = true;
+  room.add(wallS);
+
+  // East wall
+  const wallE = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROOM.depth, ROOM.height),
+    wallMat
+  );
+  wallE.position.set(ROOM.width/2, ROOM.height/2, 0);
+  wallE.rotation.y = -Math.PI / 2;
+  wallE.receiveShadow = true;
+  room.add(wallE);
+
+  // West wall
+  const wallW = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROOM.depth, ROOM.height),
+    wallMat
+  );
+  wallW.position.set(-ROOM.width/2, ROOM.height/2, 0);
+  wallW.rotation.y = Math.PI / 2;
+  wallW.receiveShadow = true;
+  room.add(wallW);
+
+  // North wall — 3 segments around door
+  const sideW = (ROOM.width - DOOR.width) / 2;
+  const wallN_L = new THREE.Mesh(
+    new THREE.PlaneGeometry(sideW, ROOM.height),
+    wallMat
+  );
+  wallN_L.position.set(-DOOR.width/2 - sideW/2, ROOM.height/2, -ROOM.depth/2);
+  wallN_L.receiveShadow = true;
+  room.add(wallN_L);
+
+  const wallN_R = new THREE.Mesh(
+    new THREE.PlaneGeometry(sideW, ROOM.height),
+    wallMat
+  );
+  wallN_R.position.set(DOOR.width/2 + sideW/2, ROOM.height/2, -ROOM.depth/2);
+  wallN_R.receiveShadow = true;
+  room.add(wallN_R);
+
+  const topH = ROOM.height - DOOR.height;
+  const wallN_T = new THREE.Mesh(
+    new THREE.PlaneGeometry(DOOR.width, topH),
+    wallMat
+  );
+  wallN_T.position.set(0, DOOR.height + topH/2, -ROOM.depth/2);
+  wallN_T.receiveShadow = true;
+  room.add(wallN_T);
+
+  // Skirting boards
+  const skirtH = 0.08;
+  const sk1 = new THREE.Mesh(new THREE.BoxGeometry(ROOM.width, skirtH, 0.04), skirtMat);
+  sk1.position.set(0, skirtH/2, ROOM.depth/2 - 0.02);
+  room.add(sk1);
+  const sk2 = new THREE.Mesh(new THREE.BoxGeometry(0.04, skirtH, ROOM.depth), skirtMat);
+  sk2.position.set(ROOM.width/2 - 0.02, skirtH/2, 0);
+  room.add(sk2);
+  const sk3 = new THREE.Mesh(new THREE.BoxGeometry(0.04, skirtH, ROOM.depth), skirtMat);
+  sk3.position.set(-ROOM.width/2 + 0.02, skirtH/2, 0);
+  room.add(sk3);
+
+  // Door
+  const doorMat = new THREE.MeshStandardMaterial({ color: 0x4a2f1c, roughness: 0.7 });
+  const doorFrameMat = new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.6 });
+  const doorMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(DOOR.width, DOOR.height, 0.04),
+    doorMat
+  );
+  doorMesh.position.set(DOOR.centerX, DOOR.height/2, -ROOM.depth/2 + 0.02);
+  doorMesh.castShadow = true; doorMesh.receiveShadow = true;
+  room.add(doorMesh);
+  window._doorMesh = doorMesh;
+
+  const ft = 0.06;
+  const fT = new THREE.Mesh(new THREE.BoxGeometry(DOOR.width + ft*2, ft, 0.06), doorFrameMat);
+  fT.position.set(0, DOOR.height + ft/2, -ROOM.depth/2 + 0.03);
+  room.add(fT);
+  const fL = new THREE.Mesh(new THREE.BoxGeometry(ft, DOOR.height + ft, 0.06), doorFrameMat);
+  fL.position.set(-DOOR.width/2 - ft/2, (DOOR.height + ft)/2, -ROOM.depth/2 + 0.03);
+  room.add(fL);
+  const fR = new THREE.Mesh(new THREE.BoxGeometry(ft, DOOR.height + ft, 0.06), doorFrameMat);
+  fR.position.set(DOOR.width/2 + ft/2, (DOOR.height + ft)/2, -ROOM.depth/2 + 0.03);
+  room.add(fR);
+
+  // Door handle
+  const handle = new THREE.Mesh(
+    new THREE.SphereGeometry(0.025, 12, 8),
+    new THREE.MeshStandardMaterial({ color: 0xc8a14a, roughness: 0.3, metalness: 0.7 })
+  );
+  handle.position.set(DOOR.width/2 - 0.10, DOOR.height/2, -ROOM.depth/2 + 0.05);
+  room.add(handle);
+
+  /* ───── Therapy couch ───── */
+  const couch = new THREE.Group();
+  couch.position.set(-2.2, 0, 0.2);
+  scene.add(couch);
+
+  const couchMat = new THREE.MeshStandardMaterial({ color: 0x4d6480, roughness: 0.85 });
+  const pillowMat = new THREE.MeshStandardMaterial({ color: 0xc8d4e2, roughness: 0.95 });
+  const couchLegMat = new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.6 });
+
+  const couchBase = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.45, 2.1), couchMat);
+  couchBase.position.y = 0.42;
+  couchBase.castShadow = true; couchBase.receiveShadow = true;
+  couch.add(couchBase);
+
+  const headrest = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.18, 0.5), couchMat);
+  headrest.position.set(0, 0.65, 0.85);
+  headrest.rotation.x = -0.18;
+  headrest.castShadow = true;
+  couch.add(headrest);
+
+  const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 0.32), pillowMat);
+  pillow.position.set(0, 0.78, 0.78);
+  pillow.rotation.x = -0.18;
+  pillow.castShadow = true;
+  couch.add(pillow);
+
+  [[-0.35,-1.0],[0.35,-1.0],[-0.35,0.95],[0.35,0.95]].forEach(([x,z]) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.2, 0.06), couchLegMat);
+    leg.position.set(x, 0.1, z);
+    leg.castShadow = true;
+    couch.add(leg);
+  });
+  addCollider(couchBase);
+
+  /* ───── Desk ───── */
+  const desk = new THREE.Group();
+  desk.position.set(2.4, 0, 0);
+  scene.add(desk);
+
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6d4a2e, roughness: 0.6 });
+  const woodDarkMat = new THREE.MeshStandardMaterial({ color: 0x3d2616, roughness: 0.7 });
+
+  const deskTop = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.06, 1.5), woodMat);
+  deskTop.position.y = 0.74;
+  deskTop.castShadow = true; deskTop.receiveShadow = true;
+  desk.add(deskTop);
+
+  const deskDrawer = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.55), woodMat);
+  deskDrawer.position.set(0, 0.46, 0.45);
+  deskDrawer.castShadow = true; deskDrawer.receiveShadow = true;
+  desk.add(deskDrawer);
+
+  for (let i = 0; i < 2; i++) {
+    const d = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.18, 0.02), woodDarkMat);
+    d.position.set(0, 0.55 - i*0.22, 0.45 + 0.275 + 0.005);
+    desk.add(d);
+    const k = new THREE.Mesh(
+      new THREE.SphereGeometry(0.015, 8, 8),
+      new THREE.MeshStandardMaterial({ color: 0xc8a14a, roughness: 0.3, metalness: 0.7 })
+    );
+    k.position.set(0, 0.55 - i*0.22, 0.45 + 0.275 + 0.025);
+    desk.add(k);
+  }
+
+  // Desk legs
+  [[-0.32,-0.7],[0.32,-0.7],[-0.32,0.7],[0.32,0.7]].forEach(([x,z]) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.7, 0.04), woodDarkMat);
+    leg.position.set(x, 0.35, z);
+    desk.add(leg);
+  });
+
+  // Desk lamp
+  const lampBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.09, 0.04, 14),
+    new THREE.MeshStandardMaterial({ color: 0x8a8a8a, roughness: 0.4, metalness: 0.6 })
+  );
+  lampBase.position.set(-0.2, 0.79, -0.5);
+  desk.add(lampBase);
+  const lampStem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.012, 0.012, 0.32, 8),
+    new THREE.MeshStandardMaterial({ color: 0x6a6a6a, roughness: 0.4, metalness: 0.6 })
+  );
+  lampStem.position.set(-0.2, 0.95, -0.5);
+  desk.add(lampStem);
+  const lampShade = new THREE.Mesh(
+    new THREE.ConeGeometry(0.11, 0.13, 16, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0xece6dd, roughness: 0.6, side: THREE.DoubleSide, emissive: 0xfff0c0, emissiveIntensity: 0.3 })
+  );
+  lampShade.position.set(-0.2, 1.16, -0.5);
+  desk.add(lampShade);
+  const lampLight = new THREE.PointLight(0xffd9a0, 0.7, 3.5, 1.6);
+  lampLight.position.set(-0.2, 1.05, -0.5);
+  lampLight.castShadow = true;
+  lampLight.shadow.mapSize.set(512, 512);
+  desk.add(lampLight);
+
+  // Notebook & cup
+  const notebook = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.02, 0.3),
+    new THREE.MeshStandardMaterial({ color: 0x6a2030, roughness: 0.7 })
+  );
+  notebook.position.set(0.05, 0.78, -0.1);
+  notebook.rotation.y = 0.15;
+  notebook.castShadow = true;
+  desk.add(notebook);
+
+  const cup = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.035, 0.08, 14),
+    new THREE.MeshStandardMaterial({ color: 0xece6dd, roughness: 0.4 })
+  );
+  cup.position.set(0.2, 0.81, -0.3);
+  cup.castShadow = true;
+  desk.add(cup);
+
+  addCollider(deskTop);
+  addCollider(deskDrawer);
+
+  /* ───── Therapist chair ───── */
+  const chair = new THREE.Group();
+  chair.position.set(2.85, 0, 0);
+  scene.add(chair);
+  const chairMat = new THREE.MeshStandardMaterial({ color: 0x2d3035, roughness: 0.85 });
+  const chairSeat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.5), chairMat);
+  chairSeat.position.y = 0.5; chairSeat.castShadow = true;
+  chair.add(chairSeat);
+  const chairBack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), chairMat);
+  chairBack.position.set(0, 0.85, 0.21); chairBack.castShadow = true;
+  chair.add(chairBack);
+  const chairLeg = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03, 0.03, 0.45, 8),
+    new THREE.MeshStandardMaterial({color:0x222, metalness:0.7, roughness:0.4})
+  );
+  chairLeg.position.y = 0.225; chair.add(chairLeg);
+  const chairBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.27, 0.04, 16),
+    new THREE.MeshStandardMaterial({color:0x1a1a1a, metalness:0.6, roughness:0.4})
+  );
+  chairBase.position.y = 0.02; chair.add(chairBase);
+  addCollider(chairSeat);
+  addCollider(chairBack);
+
+  /* ───── Bookshelf ───── */
+  const shelf = new THREE.Group();
+  shelf.position.set(-3.2, 0, 3.5);
+  scene.add(shelf);
+  const shelfFrame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.0, 0.36), woodDarkMat);
+  shelfFrame.position.y = 1.0;
+  shelfFrame.castShadow = true; shelfFrame.receiveShadow = true;
+  shelf.add(shelfFrame);
+
+  for (let s = 0; s < 4; s++) {
+    const interior = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 0.42, 0.3),
+      new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.8 })
+    );
+    interior.position.set(0, 0.3 + s*0.45, 0.02);
+    shelf.add(interior);
+
+    const bookColors = [0x6a2030, 0x1f2d4a, 0x2a3a2a, 0x6d4a2e, 0x2d3035, 0xece6dd, 0x96866a, 0x4f6a8a];
+    let x = -0.7;
+    while (x < 0.7) {
+      const bw = 0.04 + Math.random()*0.05;
+      const bh = 0.32 + Math.random()*0.06;
+      const book = new THREE.Mesh(
+        new THREE.BoxGeometry(bw, bh, 0.22),
+        new THREE.MeshStandardMaterial({ color: bookColors[Math.floor(Math.random()*bookColors.length)], roughness: 0.8 })
+      );
+      book.position.set(x + bw/2, 0.3 + s*0.45 - 0.21 + bh/2, 0.05);
+      book.castShadow = true;
+      shelf.add(book);
+      x += bw + 0.005;
+      if (Math.random() < 0.1) x += 0.05;
+    }
+  }
+  addCollider(shelfFrame);
+
+  /* ───── Rug ───── */
+  const rug = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.6, 2.0),
+    new THREE.MeshStandardMaterial({ color: 0x2a3d52, roughness: 0.95 })
+  );
+  rug.rotation.x = -Math.PI/2;
+  rug.position.set(0.2, 0.005, 0.3);
+  rug.receiveShadow = true;
+  scene.add(rug);
+
+  const rugBorder = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.3, 1.7),
+    new THREE.MeshStandardMaterial({ color: 0x3a5573, roughness: 0.95 })
+  );
+  rugBorder.rotation.x = -Math.PI/2;
+  rugBorder.position.set(0.2, 0.006, 0.3);
+  scene.add(rugBorder);
+
+  const rugInner = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.0, 1.4),
+    new THREE.MeshStandardMaterial({ color: 0x2a3d52, roughness: 0.95 })
+  );
+  rugInner.rotation.x = -Math.PI/2;
+  rugInner.position.set(0.2, 0.007, 0.3);
+  scene.add(rugInner);
+
+  /* ───── Plant ───── */
+  const plant = new THREE.Group();
+  plant.position.set(3.6, 0, -3.2);
+  scene.add(plant);
+  const pot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.18, 0.32, 16),
+    new THREE.MeshStandardMaterial({ color: 0x8a4a2a, roughness: 0.7 })
+  );
+  pot.position.y = 0.16;
+  pot.castShadow = true;
+  plant.add(pot);
+  // Foliage cluster
+  for (let i = 0; i < 6; i++) {
+    const leaf = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18 + Math.random()*0.08, 8, 6),
+      new THREE.MeshStandardMaterial({ color: 0x2a5a2a + Math.floor(Math.random()*0x202020), roughness: 0.85 })
+    );
+    const a = (i / 6) * Math.PI * 2;
+    leaf.position.set(Math.cos(a)*0.12, 0.45 + Math.random()*0.15, Math.sin(a)*0.12);
+    leaf.castShadow = true;
+    plant.add(leaf);
+  }
+  addCollider(pot);
+
+  /* ───── Side table ───── */
+  const sideTable = new THREE.Group();
+  sideTable.position.set(-3.4, 0, 0.2);
+  scene.add(sideTable);
+  const sideTop = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.25, 0.04, 16),
+    woodMat
+  );
+  sideTop.position.y = 0.55;
+  sideTop.castShadow = true;
+  sideTable.add(sideTop);
+  const sideLeg = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03, 0.03, 0.55, 8),
+    woodDarkMat
+  );
+  sideLeg.position.y = 0.275;
+  sideTable.add(sideLeg);
+  const tissue = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 0.09, 0.12),
+    new THREE.MeshStandardMaterial({ color: 0xece6dd, roughness: 0.7 })
+  );
+  tissue.position.y = 0.62;
+  tissue.castShadow = true;
+  sideTable.add(tissue);
+  addCollider(sideTop);
+
+  /* ───── Wall art (frame on north wall) ───── */
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 0.6, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0x3a2616, roughness: 0.6 })
+  );
+  frame.position.set(2.0, 1.7, -ROOM.depth/2 + 0.05);
+  frame.castShadow = true;
+  scene.add(frame);
+  const art = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.78, 0.48),
+    new THREE.MeshStandardMaterial({ color: 0x4a6a8a, roughness: 0.8 })
+  );
+  art.position.set(2.0, 1.7, -ROOM.depth/2 + 0.072);
+  scene.add(art);
+}
+
+function buildLighting() {
+  const ambient = new THREE.AmbientLight(0x8aa3c4, 0.45);
+  scene.add(ambient);
+
+  const hemi = new THREE.HemisphereLight(0xb8d0ec, 0x40342a, 0.5);
+  scene.add(hemi);
+
+  // Ceiling light
+  const ceilLight = new THREE.PointLight(0xffe6b8, 1.2, 12, 1.4);
+  ceilLight.position.set(0, ROOM.height - 0.2, 0);
+  ceilLight.castShadow = true;
+  ceilLight.shadow.mapSize.set(1024, 1024);
+  ceilLight.shadow.camera.near = 0.1;
+  ceilLight.shadow.camera.far = 12;
+  scene.add(ceilLight);
+
+  // Visible ceiling fixture
+  const fixtureBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16),
+    new THREE.MeshStandardMaterial({ color: 0x6a6a6a, roughness: 0.4, metalness: 0.5 })
+  );
+  fixtureBase.position.set(0, ROOM.height - 0.02, 0);
+  scene.add(fixtureBase);
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(0.32, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({
+      color: 0xfff8e8, roughness: 0.4, side: THREE.DoubleSide,
+      emissive: 0xfff0c0, emissiveIntensity: 0.6
+    })
+  );
+  dome.position.set(0, ROOM.height - 0.05, 0);
+  dome.rotation.x = Math.PI;
+  scene.add(dome);
+
+  // Soft fill from south
+  const fill = new THREE.DirectionalLight(0xb8d0ec, 0.25);
+  fill.position.set(0, 4, 4);
+  scene.add(fill);
+}
+
+/* ───── Player spawn ───── */
+function spawnPlayer() {
+  player = cloneCharacter(charState.selectedId);
+  if (!player) return;
+  player.position.copy(playerState.pos);
+  scene.add(player);
+
+  // Setup mixer
+  playerMixer = new THREE.AnimationMixer(player);
+  for (const id of Object.keys(animationClips)) {
+    const action = playerMixer.clipAction(animationClips[id]);
+    playerActions[id] = action;
+  }
+  // Start with idle
+  if (playerActions.idle) {
+    playerActions.idle.play();
+    playerState.currentAnim = 'idle';
+  }
+}
+
+function setPlayerAnim(name) {
+  if (playerState.currentAnim === name) return;
+  if (!playerActions[name]) return;
+  const from = playerActions[playerState.currentAnim];
+  const to = playerActions[name];
+  to.reset();
+  to.play();
+  if (from) {
+    from.crossFadeTo(to, 0.25, false);
+  }
+  playerState.currentAnim = name;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COLLISION
+   ═══════════════════════════════════════════════════════════════ */
+function collidesAt(x, z) {
+  if (x < -ROOM.width/2 + PLAYER_RADIUS) return true;
+  if (x > ROOM.width/2 - PLAYER_RADIUS) return true;
+  if (z < -ROOM.depth/2 + PLAYER_RADIUS) return true;
+  if (z > ROOM.depth/2 - PLAYER_RADIUS) return true;
+
+  for (const box of FURNITURE) {
+    if (x + PLAYER_RADIUS > box.min.x &&
+        x - PLAYER_RADIUS < box.max.x &&
+        z + PLAYER_RADIUS > box.min.z &&
+        z - PLAYER_RADIUS < box.max.z) {
+      if (box.max.y > 0.15) return true;
+    }
+  }
+  return false;
+}
+
+function tryMove(dx, dz) {
+  const newX = playerState.pos.x + dx;
+  if (!collidesAt(newX, playerState.pos.z)) {
+    playerState.pos.x = newX;
+  }
+  const newZ = playerState.pos.z + dz;
+  if (!collidesAt(playerState.pos.x, newZ)) {
+    playerState.pos.z = newZ;
+  }
+
+  // Depenetration safety
+  let attempts = 0;
+  while (collidesAt(playerState.pos.x, playerState.pos.z) && attempts < 8) {
+    const ex = -playerState.pos.x;
+    const ez = -playerState.pos.z;
+    const len = Math.hypot(ex, ez) || 1;
+    playerState.pos.x += (ex / len) * 0.06;
+    playerState.pos.z += (ez / len) * 0.06;
+    attempts++;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INPUT
+   ═══════════════════════════════════════════════════════════════ */
+const keys = {};
+window.addEventListener('keydown', e => {
+  if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+    document.activeElement.blur();
+  }
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+    return; // don't capture when typing
+  }
+  keys[e.code] = true;
+  if (e.key === 'ArrowUp')    keys['ArrowUp']    = true;
+  if (e.key === 'ArrowDown')  keys['ArrowDown']  = true;
+  if (e.key === 'ArrowLeft')  keys['ArrowLeft']  = true;
+  if (e.key === 'ArrowRight') keys['ArrowRight'] = true;
+  if (e.code === 'KeyC') cycleCamera();
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
+    e.preventDefault();
+  }
+});
+window.addEventListener('keyup', e => {
+  keys[e.code] = false;
+  if (e.key === 'ArrowUp')    keys['ArrowUp']    = false;
+  if (e.key === 'ArrowDown')  keys['ArrowDown']  = false;
+  if (e.key === 'ArrowLeft')  keys['ArrowLeft']  = false;
+  if (e.key === 'ArrowRight') keys['ArrowRight'] = false;
+});
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+function cycleCamera() {
+  applyCamPreset((camState.mode + 1) % CAM_PRESETS.length);
+  showToast('Kamera: ' + camState.modeNames[camState.mode]);
+}
+function applyCamPreset(i) {
+  camState.mode = i;
+  const p = CAM_PRESETS[i];
+  camState.targetYaw = p.yaw;
+  camState.targetPitch = p.pitch;
+  camState.targetDistance = p.distance;
+  document.getElementById('lblKamera').textContent = camState.modeNames[i];
+}
+
+// Mouse drag
+let isDragging = false, lastMx = 0, lastMy = 0;
+const canvas = document.getElementById('gameCanvas');
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 0) { isDragging = true; lastMx = e.clientX; lastMy = e.clientY; }
+});
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - lastMx;
+  const dy = e.clientY - lastMy;
+  lastMx = e.clientX; lastMy = e.clientY;
+  camState.targetYaw -= dx * 0.005;
+  camState.targetPitch = Math.max(0.1, Math.min(1.4, camState.targetPitch + dy * 0.005));
+});
+window.addEventListener('mouseup', () => { isDragging = false; });
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  camState.targetDistance = Math.max(1.5, Math.min(8, camState.targetDistance + e.deltaY * 0.005));
+}, { passive: false });
+
+/* ═══════════════════════════════════════════════════════════════
+   PLAYER UPDATE
+   ═══════════════════════════════════════════════════════════════ */
+function updatePlayer(dt) {
+  if (!player) return;
+
+  const fwd = new THREE.Vector3(-Math.sin(camState.yaw), 0, -Math.cos(camState.yaw));
+  const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+
+  let mx = 0, mz = 0;
+  if (keys['KeyW'] || keys['ArrowUp'])    { mx += fwd.x; mz += fwd.z; }
+  if (keys['KeyS'] || keys['ArrowDown'])  { mx -= fwd.x; mz -= fwd.z; }
+  if (keys['KeyA'] || keys['ArrowLeft'])  { mx -= right.x; mz -= right.z; }
+  if (keys['KeyD'] || keys['ArrowRight']) { mx += right.x; mz += right.z; }
+
+  const isMoving = (mx !== 0 || mz !== 0);
+  if (isMoving) {
+    const len = Math.hypot(mx, mz);
+    mx /= len; mz /= len;
+    const speed = 1.8;
+    tryMove(mx * speed * dt, mz * speed * dt);
+    playerState.targetYaw = Math.atan2(mx, mz);
+    setPlayerAnim('walking');
+  } else {
+    setPlayerAnim('idle');
+  }
+
+  let dy = playerState.targetYaw - playerState.yaw;
+  while (dy > Math.PI) dy -= 2*Math.PI;
+  while (dy < -Math.PI) dy += 2*Math.PI;
+  playerState.yaw += dy * Math.min(1, dt * 12);
+
+  if (keys['Space'] && playerState.isOnGround) {
+    playerState.jumpVel = 5.0;
+    playerState.isOnGround = false;
+  }
+  if (!playerState.isOnGround) {
+    playerState.jumpVel -= 14.5 * dt;
+    playerState.yOffset += playerState.jumpVel * dt;
+    if (playerState.yOffset <= 0) {
+      playerState.yOffset = 0;
+      playerState.jumpVel = 0;
+      playerState.isOnGround = true;
+    }
+  }
+
+  player.position.set(playerState.pos.x, playerState.pos.y + playerState.yOffset, playerState.pos.z);
+  player.rotation.y = playerState.yaw;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CAMERA UPDATE
+   ═══════════════════════════════════════════════════════════════ */
+function updateCamera(dt) {
+  // Smooth lerp
+  camState.yaw += (camState.targetYaw - camState.yaw) * Math.min(1, dt * 6);
+  camState.pitch += (camState.targetPitch - camState.pitch) * Math.min(1, dt * 6);
+  camState.distance += (camState.targetDistance - camState.distance) * Math.min(1, dt * 6);
+
+  const target = new THREE.Vector3(playerState.pos.x, playerState.pos.y + 1.2, playerState.pos.z);
+  const sx = Math.sin(camState.yaw) * Math.cos(camState.pitch);
+  const sy = Math.sin(camState.pitch);
+  const sz = Math.cos(camState.yaw) * Math.cos(camState.pitch);
+
+  let cx = target.x + sx * camState.distance;
+  let cy = target.y + sy * camState.distance;
+  let cz = target.z + sz * camState.distance;
+
+  // Clamp camera within room
+  const m = 0.25;
+  cx = Math.max(-ROOM.width/2 + m, Math.min(ROOM.width/2 - m, cx));
+  cz = Math.max(-ROOM.depth/2 + m, Math.min(ROOM.depth/2 - m, cz));
+  cy = Math.max(0.5, Math.min(ROOM.height - m, cy));
+
+  camera.position.set(cx, cy, cz);
+  camera.lookAt(target);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CLIENT AI
+   ═══════════════════════════════════════════════════════════════ */
+const COUCH_TARGET = {
+  approach: new THREE.Vector3(-1.5, 0, -0.5),
+  lyingPos: new THREE.Vector3(-2.2, 0.95, -0.78),
+};
+
+let clientState = null;
+
+function spawnClient() {
+  if (client) {
+    showToast('Bir müşteri zaten içeride.');
+    return;
+  }
+
+  // Pick a random character (different from player ideally)
+  const candidates = CHARACTERS.filter(c => c.id !== charState.selectedId);
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+
+  client = cloneCharacter(pick.id);
+  if (!client) return;
+
+  client.position.set(0, 0, -3.5);
+  scene.add(client);
+
+  clientMixer = new THREE.AnimationMixer(client);
+  clientActions = {};
+  for (const id of Object.keys(animationClips)) {
+    clientActions[id] = clientMixer.clipAction(animationClips[id]);
+  }
+
+  // Walk in
+  clientActions.walking?.play();
+
+  clientState = {
+    phase: 'walking',
+    waypoints: [
+      new THREE.Vector3(0, 0, -1.0),
+      new THREE.Vector3(-0.4, 0, -0.5),
+      COUCH_TARGET.approach.clone(),
+    ],
+    currentWp: 0,
+    yaw: 0,
+    targetYaw: 0,
+    lieT: 0,
+    currentAnim: 'walking',
+  };
+
+  animateDoor();
+  showToast(`${pick.name} kapıdan giriyor...`);
+}
+
+function setClientAnim(name) {
+  if (!clientState || clientState.currentAnim === name) return;
+  if (!clientActions[name]) return;
+  const from = clientActions[clientState.currentAnim];
+  const to = clientActions[name];
+  to.reset();
+  to.play();
+  if (from) from.crossFadeTo(to, 0.3, false);
+  clientState.currentAnim = name;
+}
+
+function updateClient(dt) {
+  if (!client || !clientState) return;
+
+  const cs = clientState;
+
+  if (cs.phase === 'walking') {
+    const wp = cs.waypoints[cs.currentWp];
+    if (!wp) {
+      cs.phase = 'turning';
+      return;
+    }
+    const dx = wp.x - client.position.x;
+    const dz = wp.z - client.position.z;
+    const dist = Math.hypot(dx, dz);
+
+    if (dist < 0.12) {
+      cs.currentWp++;
+      if (cs.currentWp >= cs.waypoints.length) {
+        cs.phase = 'turning';
+        cs.targetYaw = Math.PI; // face along +Z (toward pillow end)
+        return;
+      }
+      return;
+    }
+
+    const speed = 1.4;
+    const nx = dx / dist;
+    const nz = dz / dist;
+    client.position.x += nx * speed * dt;
+    client.position.z += nz * speed * dt;
+    cs.targetYaw = Math.atan2(nx, nz);
+
+    // Smooth yaw
+    let dy = cs.targetYaw - cs.yaw;
+    while (dy > Math.PI) dy -= 2*Math.PI;
+    while (dy < -Math.PI) dy += 2*Math.PI;
+    cs.yaw += dy * Math.min(1, dt * 8);
+    client.rotation.y = cs.yaw;
+  }
+  else if (cs.phase === 'turning') {
+    let dy = cs.targetYaw - cs.yaw;
+    while (dy > Math.PI) dy -= 2*Math.PI;
+    while (dy < -Math.PI) dy += 2*Math.PI;
+    cs.yaw += dy * Math.min(1, dt * 6);
+    client.rotation.y = cs.yaw;
+
+    setClientAnim('idle');
+
+    if (Math.abs(dy) < 0.04) {
+      cs.phase = 'lyingDown';
+      cs.lieT = 0;
+      // Switch to lying animation as we lerp into position
+      setClientAnim('lying');
+      // For lying, we override rotation order
+      client.rotation.order = 'YXZ';
+    }
+  }
+  else if (cs.phase === 'lyingDown') {
+    cs.lieT += dt * 0.8;
+    const t = Math.min(1, cs.lieT);
+    const start = COUCH_TARGET.approach;
+    const end = COUCH_TARGET.lyingPos;
+    client.position.x = start.x + (end.x - start.x) * t;
+    client.position.y = start.y + (end.y - start.y) * t;
+    client.position.z = start.z + (end.z - start.z) * t;
+    // Rotate to face up: pitch -π/2, yaw π
+    client.rotation.y = Math.PI;
+    client.rotation.x = -Math.PI / 2 * t;
+
+    if (t >= 1) {
+      cs.phase = 'lying';
+      document.getElementById('btnBitir').disabled = false;
+      showToast('Müşteri uzandı. Seansı yönetebilirsiniz.');
+    }
+  }
+  else if (cs.phase === 'walking_out') {
+    const wp = cs.waypoints[cs.currentWp];
+    if (!wp) {
+      // Done — remove client
+      scene.remove(client);
+      client = null;
+      clientMixer = null;
+      clientState = null;
+      // Increment session
+      sessionCount++;
+      gameMinutes += 50;
+      updateHUD();
+      return;
+    }
+    const dx = wp.x - client.position.x;
+    const dz = wp.z - client.position.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < 0.15) {
+      cs.currentWp++;
+      return;
+    }
+    const speed = 1.4;
+    const nx = dx / dist;
+    const nz = dz / dist;
+    client.position.x += nx * speed * dt;
+    client.position.z += nz * speed * dt;
+    cs.targetYaw = Math.atan2(nx, nz);
+    let dy = cs.targetYaw - cs.yaw;
+    while (dy > Math.PI) dy -= 2*Math.PI;
+    while (dy < -Math.PI) dy += 2*Math.PI;
+    cs.yaw += dy * Math.min(1, dt * 8);
+    client.rotation.y = cs.yaw;
+  }
+}
+
+function dismissClient() {
+  if (!client || !clientState || clientState.phase !== 'lying') return;
+
+  // Reset rotation order/pitch
+  client.rotation.order = 'XYZ';
+  client.rotation.x = 0;
+  client.position.set(COUCH_TARGET.approach.x, 0, COUCH_TARGET.approach.z);
+  client.rotation.y = 0;
+
+  setClientAnim('walking');
+
+  clientState.phase = 'walking_out';
+  clientState.currentWp = 0;
+  clientState.waypoints = [
+    new THREE.Vector3(0, 0, -1.0),
+    new THREE.Vector3(0, 0, -3.5),
+    new THREE.Vector3(0, 0, -4.5), // out the door
+  ];
+  clientState.yaw = client.rotation.y;
+  clientState.targetYaw = clientState.yaw;
+
+  document.getElementById('btnBitir').disabled = true;
+  animateDoor();
+  showToast('Seans sona erdi.');
+}
+
+/* ───── Door animation ───── */
+let doorAnimT = 0, doorAnimating = false;
+function animateDoor() {
+  doorAnimT = 0;
+  doorAnimating = true;
+}
+function updateDoor(dt) {
+  if (!doorAnimating) return;
+  doorAnimT += dt;
+  const door = window._doorMesh;
+  if (!door) return;
+  // Open from 0 to 0.4 sec, hold to 1.4, close to 1.8
+  if (doorAnimT < 0.4) {
+    door.rotation.y = (doorAnimT / 0.4) * (-Math.PI / 2.5);
+  } else if (doorAnimT < 1.4) {
+    door.rotation.y = -Math.PI / 2.5;
+  } else if (doorAnimT < 1.8) {
+    const t = (doorAnimT - 1.4) / 0.4;
+    door.rotation.y = (-Math.PI / 2.5) * (1 - t);
+  } else {
+    door.rotation.y = 0;
+    doorAnimating = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HUD / GAME STATE
+   ═══════════════════════════════════════════════════════════════ */
+let sessionCount = 1;
+let gameMinutes = 9 * 60; // start at 09:00
+
+function updateHUD() {
+  const h = Math.floor(gameMinutes / 60) % 24;
+  const m = Math.floor(gameMinutes % 60);
+  document.getElementById('lblSeans').textContent = '#' + sessionCount;
+  document.getElementById('lblSaat').textContent =
+    String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+function showToast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.getElementById('toastArea').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+document.getElementById('btnMusteri').addEventListener('click', spawnClient);
+document.getElementById('btnBitir').addEventListener('click', dismissClient);
+document.getElementById('btnMenu').addEventListener('click', () => {
+  if (confirm('Ana menüye dönmek istediğinize emin misiniz?')) {
+    location.reload();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   START GAME
+   ═══════════════════════════════════════════════════════════════ */
+function startGame() {
+  document.getElementById('entryScreen').classList.remove('active');
+  document.getElementById('gameContainer').classList.add('active');
+  document.getElementById('lblKlinik').textContent = charState.klinik;
+  document.getElementById('lblTerapist').textContent = 'Sorumlu: ' + charState.terapist;
+  initGame();
+  updateHUD();
+  applyCamPreset(0);
+  animateGame();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GAME LOOP
+   ═══════════════════════════════════════════════════════════════ */
+const gameClock = new THREE.Clock();
+function animateGame() {
+  requestAnimationFrame(animateGame);
+  const dt = Math.min(0.05, gameClock.getDelta());
+
+  updatePlayer(dt);
+  updateCamera(dt);
+  updateClient(dt);
+  updateDoor(dt);
+
+  if (playerMixer) playerMixer.update(dt);
+  if (clientMixer) clientMixer.update(dt);
+
+  // Game time progresses: 1 real sec = 12 game min
+  gameMinutes += dt * 12 / 60 * 60; // 12 game min per real sec
+  if (Math.floor(gameMinutes) % 1 === 0) updateHUD();
+
+  renderer.render(scene, camera);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════════════════════ */
+async function boot() {
+  initPreview();
+  animatePreview();
+
+  await loadAllAssets();
+
+  // Hide loading, show entry
+  document.getElementById('loadingScreen').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('entryScreen').classList.add('active');
+  }, 400);
+
+  buildCharacterGrid();
+  // Auto-select first character
+  if (CHARACTERS.length > 0) {
+    selectCharacter(CHARACTERS[0].id);
+  }
+  // Resize preview after entry shown
+  setTimeout(resizePreview, 100);
+}
+
+boot().catch(err => {
+  console.error('Boot error:', err);
+  document.getElementById('loadingDetail').textContent =
+    'Yükleme hatası: ' + err.message + '. Konsolu (F12) kontrol edin.';
+});
+</script>
+
+</body>
+</html>
